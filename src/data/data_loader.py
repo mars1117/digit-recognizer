@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 from torchvision import transforms
 
 
@@ -50,5 +50,3 @@ if __name__ == "__main__":
         print(type(lbl))
         plt.imshow(img.numpy().squeeze(), cmap='gray')
         plt.show()
-
-
