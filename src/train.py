@@ -27,10 +27,11 @@ def train(tr_data, te_data=None):
 
     # loss function, optimizer 설정
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
     # train
-    for epoch in range(30):
+    minimum_tr_loss = 0.1
+    for epoch in range(1000):
         train_loss = 0.0
         for i, data in enumerate(tr_data):
             img, lbl = data
@@ -47,8 +48,17 @@ def train(tr_data, te_data=None):
             train_loss += tr_loss.item()
             print("\r>>>>>>>>>>>>>>>>>>>mini batch {} loss: {}".format(i, tr_loss), end='')
 
-        train_loss /= len(tr_data_loader)
+        train_loss /= len(tr_data)
         print("\r{} epoch train loss: {}".format(epoch, train_loss))
+
+        if train_loss < minimum_tr_loss:
+            minimum_tr_loss = train_loss
+            torch.save({
+                'epoch': epoch,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'loss': minimum_tr_loss,
+            }, "checkpoints/digit_recog_0621.pt")
 
     torch.cuda.empty_cache()
 
@@ -59,11 +69,7 @@ if __name__ == "__main__":
          transforms.Normalize(mean=[0.5], std=[0.5])]  # (input[channel] - mean[channel]) / std[channel]
     )
 
-    train_dataset = DigitDataset("../data/train.csv", img_trsf=img_trsf)
+    train_dataset = DigitDataset("../data/train.csv", img_trsf=img_trsf, mode="train")
     tr_data_loader = DataLoader(train_dataset, batch_size=1024, shuffle=True, num_workers=0)
 
-    # test_dataset = DigitDataset("../data/test.csv", img_trsf=img_trsf)
-    # te_data_loader = DataLoader(test_dataset, batch_size=2)
-
     train(tr_data_loader)
-
