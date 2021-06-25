@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+from timeit import default_timer as timer
 
 import torch
 import torchvision
@@ -23,16 +24,19 @@ def train(tr_data, te_data=None):
 
     # model
     model = Net()
+    if torch.cuda.device_count() > 1:
+        model = nn.DataParallel(model)
     model.to(device)
 
     # loss function, optimizer 설정
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+    criterion = nn.CrossEntropyLoss().to(device)
+    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9)
 
     # train
-    minimum_tr_loss = 0.1
+    minimum_tr_loss = 1.0
     for epoch in range(1000):
         train_loss = 0.0
+        start_time = timer()
         for i, data in enumerate(tr_data):
             img, lbl = data
             img = img.float().to(device)
@@ -49,7 +53,8 @@ def train(tr_data, te_data=None):
             print("\r>>>>>>>>>>>>>>>>>>>mini batch {} loss: {}".format(i, tr_loss), end='')
 
         train_loss /= len(tr_data)
-        print("\r{} epoch train loss: {}".format(epoch, train_loss))
+        end_time = timer()
+        print("\r{} epoch train loss: {:.4f}       elapsed time: {}".format(epoch, train_loss, (end_time - start_time)))
 
         if train_loss < minimum_tr_loss:
             minimum_tr_loss = train_loss
@@ -58,18 +63,22 @@ def train(tr_data, te_data=None):
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss': minimum_tr_loss,
-            }, "checkpoints/digit_recog_0621.pt")
+            }, './checkpoints/digit_recog_0622.pth')
 
     torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":
+
+    if not os.path.isdir('./checkpoints'):
+        os.mkdir('./checkpoints')
+
     img_trsf = transforms.Compose(
         [transforms.ToTensor(),
          transforms.Normalize(mean=[0.5], std=[0.5])]  # (input[channel] - mean[channel]) / std[channel]
     )
 
     train_dataset = DigitDataset("../data/train.csv", img_trsf=img_trsf, mode="train")
-    tr_data_loader = DataLoader(train_dataset, batch_size=1024, shuffle=True, num_workers=0)
+    tr_data_loader = DataLoader(train_dataset, batch_size=3600, shuffle=True, num_workers=0)
 
     train(tr_data_loader)
