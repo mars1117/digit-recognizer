@@ -6,6 +6,7 @@ import csv
 import torch
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
+import torch.nn as nn
 
 from src.data.data_loader import DigitDataset
 from src.model.classification_model import Net
@@ -18,10 +19,12 @@ def run(ev_data):
     print('gpu 개수:', torch.cuda.device_count())
 
     # checkpoint load
-    checkpoint = torch.load('./checkpoints/digit_recog.pt')
+    checkpoint = torch.load('./checkpoints/digit_recog_0622.pth')
 
     # model
     model = Net()
+    if torch.cuda.device_count() > 1:
+        model = nn.DataParallel(model)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
     model.to(device)
